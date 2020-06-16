@@ -15,5 +15,7 @@ extension Notification.Name {
     static let hostLeft = Notification.Name("hostLeft")
     static let finishSing = Notification.Name("finishSing")
     static let didAnswer = Notification.Name("didAnswer")
+    static let checkAnswer = Notification.Name("checkAnswer")
+    static let dismissedModal = Notification.Name("dismissedModal")
     
 }

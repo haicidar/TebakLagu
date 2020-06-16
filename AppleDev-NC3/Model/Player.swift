@@ -13,6 +13,7 @@ var chars:[UIImage] = [#imageLiteral(resourceName: "char1"), #imageLiteral(resou
 var category:[UIImage] = [#imageLiteral(resourceName: "all"), #imageLiteral(resourceName: "90ss"), #imageLiteral(resourceName: "is00s")]
 
 class Player: Codable{
+    var id = myId
     var name:String
     var char:Int
     var points:Int

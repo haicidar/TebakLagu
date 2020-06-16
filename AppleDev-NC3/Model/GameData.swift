@@ -12,6 +12,10 @@ enum SongCategory {
     case all, is90s, is00s
 }
 
+enum dataType: Int, Codable {
+    case wrong, correct, dimsiss
+}
+
 struct Song: Codable {
     let judul: String
     let pencipta: String

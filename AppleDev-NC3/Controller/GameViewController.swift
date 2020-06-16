@@ -9,6 +9,11 @@
 import UIKit
 import AVFoundation
 
+enum Counter{
+    case ready, main
+}
+
+var songNow = 0
 class GameViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
     @IBOutlet weak var lirikText: UITextView!
@@ -22,35 +27,142 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     let cellReuseIdentifier = "playerCellID"
     let cellSpacingHeight: CGFloat = 0
     
-    var roundNow = 0
+//    var roundNow = 0
     let sing = AVSpeechSynthesizer()
     
     var lyricNow = 0
-    var songNow = 0
+    var isFinishSing = false
+    
+    var ready = 3
+    var second = 32
+    var timer = Timer()
+    var timerGantiPage = Timer()
+    var timerIsOn = false
+    
+    let trackLayer = CAShapeLayer()
+    let shapeLayer = CAShapeLayer()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         sing.delegate = self
+
+        setupTimeProgress()
+        startRound(round: songNow)
         
-        singSong(songId: 0)
     }
     
-    func singSong(songId: Int) {
-        singThis(gameData.listOfSongs[songId].lirik[lyricNow])
+    func setupTimeProgress() {
+        
+        let roundedPath = UIBezierPath(roundedRect: CGRect(x: -185, y: -330, width: 370, height: 245), byRoundingCorners: UIRectCorner.allCorners, cornerRadii: CGSize(width: 25.0, height: 25.0))
+           
+        trackLayer.path = roundedPath.cgPath
+        trackLayer.strokeColor = UIColor.lightGray.cgColor
+        trackLayer.lineWidth = 15
+        trackLayer.fillColor = UIColor.clear.cgColor
+        trackLayer.position = CGPoint(x: view.center.x, y: view.center.y)
+           
+        view.layer.addSublayer(trackLayer)
+           
+        shapeLayer.path = roundedPath.cgPath
+        shapeLayer.strokeColor = UIColor.systemGreen.cgColor
+        shapeLayer.lineWidth = 15
+        shapeLayer.lineCap = CAShapeLayerLineCap.round
+        shapeLayer.fillColor = UIColor.clear.cgColor
+        shapeLayer.strokeEnd = 1
+        shapeLayer.position = CGPoint(x: view.center.x, y: view.center.y)
+        shapeLayer.strokeColor = #colorLiteral(red: 0.8078431373, green: 0.9215686275, blue: 0.6470588235, alpha: 1)
+        shapeLayer.strokeEnd = 1
+        
+        view.layer.addSublayer(shapeLayer)
+    }
+       
+    func beginTimer(_ type:Counter){
+        timer.invalidate()
+        switch type {
+        case .ready:
+            timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(self.updateReady), userInfo: nil, repeats: true)
+        case .main:
+            timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(self.updateTimer), userInfo: nil, repeats: true)
+        }
+    }
+    
+    func startRound(round:Int){
+        if round == gameData.rounds{
+            print("finish")
+        }
+        second = 32
+        ready = 3
+        beginTimer(.ready)
+    }
+    
+    @objc func updateReady(){
+        lirikText.text = "\(ready)"
+        ready -= 1
+        if ready == 0 {
+            timer.invalidate()
+            lirikText.text = ""
+            beginTimer(.main)
+            singSong(songId: songNow)
+        }
+    }
+       
+    @objc func updateTimer(){
+        second -= 1
+        let percentage = Float(second)/32
+        shapeLayer.strokeEnd = CGFloat(percentage)
+        
+        if isFinishSing {
+            singSong(songId: songNow)
+        }
+        
+        if second == 10 {
+            shapeLayer.strokeColor = #colorLiteral(red: 0.8901960784, green: 0.662745098, blue: 0.662745098, alpha: 1)
+        }
+        
+        if second == 0 {
+            timer.invalidate()
+            rondeLabel.text = "Ronde \(songNow+1)"
+            print("coba nyanyi lagu ke \(songNow)")
+            startRound(round: songNow)
+        }
+    }
+    
+    @objc func singSong(songId: Int) {
+        if lyricNow == ((32 - second)/8){
+            singThis(gameData.listOfSongs[songId].lirik[lyricNow])
+        }
     }
     
     func singThis(_ phrase: String){
+        isFinishSing = false
         lirikText.text = "\(lirikText.text ?? "") \n\(phrase)"
-        
         let utterance = AVSpeechUtterance(string: phrase)
         utterance.voice = AVSpeechSynthesisVoice(language: "id-ID")
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.rate = 0.3
         sing.speak(utterance)
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        playerTable.reloadData()
         NotificationCenter.default.addObserver(self, selector: #selector(onFinishSing(_:)), name: .finishSing, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(backToGame(_:)), name: .dismissedModal, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(waitModal), name: .didAnswer, object: nil)
+    }
+    
+    @objc func backToGame(_ notification:Notification){
+        beginTimer(.main)
+    }
+    
+    @objc func waitModal(_ notification:Notification){
+        timer.invalidate()
+        guard let data = notification.object as? UUID else{return}
+        answerId = data
+        
+        let storyBoard : UIStoryboard = UIStoryboard(name: "Modal", bundle:nil)
+        let nextViewController = storyBoard.instantiateViewController(withIdentifier: "Modal")
+        nextViewController.modalPresentationStyle = .overCurrentContext
+        self.present(nextViewController, animated:true, completion:nil)
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -80,20 +192,28 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
     }
     
     @IBAction func shakeButton(_ sender: Any) {
-    }
-    
-    func delay(_ delay:Double, closure:@escaping ()->()) {
-        DispatchQueue.main.asyncAfter(
-            deadline: DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC), execute: closure)
+        timer.invalidate()
+        answerId = myId
+        let dataId = try! JSONEncoder().encode(myId)
+        do {
+            try self.mc.session.send(dataId, toPeers: self.mc.session.connectedPeers, with: .reliable)
+          }catch let error {
+            print(error.localizedDescription)
+        }
+        
+        let storyBoard : UIStoryboard = UIStoryboard(name: "Modal", bundle:nil)
+        let nextViewController = storyBoard.instantiateViewController(withIdentifier: "Answer")
+        nextViewController.modalPresentationStyle = .overCurrentContext
+        self.present(nextViewController, animated:true, completion:nil)
     }
     
     @objc func onFinishSing(_ notification:Notification){
         DispatchQueue.main.async {
             guard let lyricId = notification.object as? Int else {return}
             if lyricId < 4 {
-                self.singThis(gameData.listOfSongs[self.songNow].lirik[lyricId])
+                self.singSong(songId: songNow)
             } else {
-                self.songNow += 1
+                songNow += 1
                 self.lyricNow = 0
             }
         }
@@ -105,6 +225,7 @@ class GameViewController: UIViewController, UITableViewDelegate, UITableViewData
 extension GameViewController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         lyricNow += 1
+        isFinishSing = true
         NotificationCenter.default.post(name: .finishSing, object: lyricNow)
     }
 }

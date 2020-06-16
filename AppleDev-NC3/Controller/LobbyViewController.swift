@@ -8,6 +8,7 @@
 
 import UIKit
 import MultipeerConnectivity
+import AVFoundation
 
 class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, MCNearbyServiceAdvertiserDelegate {
         
@@ -19,7 +20,7 @@ class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDat
     
     @IBOutlet weak var buttonMulai: UIButton!
     
-    
+    var BGM = AVAudioPlayer()
     var advertiser: MCNearbyServiceAdvertiser!
     let mc = MCHandler.shared
     let game = GameHandler.shared
@@ -38,9 +39,23 @@ class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDat
         buttonMulai.isHidden = true
         buttonMulai.backgroundColor = nil
         
+        
+        do{
+            let BGMPath = Bundle.main.path(forResource: "bgm2", ofType: "mp3")
+            try BGM = AVAudioPlayer(contentsOf: NSURL(fileURLWithPath: BGMPath!) as URL)
+        } catch {
+            // error
+        }
+        
+        BGM.numberOfLoops = -1
+        BGM.volume = 0.3
+        BGM.prepareToPlay()
+        BGM.play()
+        
+        
 //        you
         hostChar.image = chars[mc.playerData.char]
-        hostName.text = "\(mc.playerData.name) dan \(mc.host?.displayName ?? "")"
+        hostName.text = "\(mc.playerData.name)"
         
         if mc.isHost{
             buttonMulai.isHidden = false
@@ -53,7 +68,6 @@ class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDat
             advertiser.startAdvertisingPeer()
         } else {
             let data = mc.playerData
-            NotificationCenter.default.post(name: .didReceiveData, object: data)
             let jsonData = try! JSONEncoder().encode(data)
             do {
                 try mc.session.send(jsonData, toPeers: mc.session.connectedPeers, with: .reliable)
@@ -115,6 +129,7 @@ class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDat
     
     
     @IBAction func start(_ sender: Any) {
+        BGM.stop()
         //host send update data
         let datas = gameData
         NotificationCenter.default.post(name: .didReceiveData, object: datas)
@@ -136,6 +151,7 @@ class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 guard let data = notification.object as? Player else{return}
                 gameData.listOfPlayers.append(data)
             } else {
+                self.BGM.stop()
                 guard let datas = notification.object as? GameData else{return}
                 gameData = datas
                 self.performSegue(withIdentifier: "lobbyToGame", sender: self)
@@ -145,11 +161,6 @@ class LobbyViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     @objc func onConnected(_ notification:Notification) {
-        print("\(mc.peerID.displayName)")
-        for peer in mc.session.connectedPeers{
-            print(peer.displayName)
-        }
-        
         DispatchQueue.main.async {
             if self.mc.isHost && self.mc.session.connectedPeers.count>0{
                 self.buttonMulai.isEnabled = true

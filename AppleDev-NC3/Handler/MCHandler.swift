@@ -46,24 +46,36 @@ class MCHandler: NSObject, MCSessionDelegate{
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         let decoder = JSONDecoder()
         DispatchQueue.main.async {
-            
-            
-            if self.isHost {
+            if self.isHost{
                 //first user data join
                 do {
-                    let player = try decoder.decode(Player.self, from: data)
-                    NotificationCenter.default.post(name: .didReceiveData, object: player)
+                    let sentData = try decoder.decode(Player.self, from: data)
+                    NotificationCenter.default.post(name: .didReceiveData, object: sentData)
                 } catch {
-                    print(error.localizedDescription)
+//                    print(error.localizedDescription)
                 }
             } else {
                 //update user data from host
                 do {
-                    let gameData = try decoder.decode(GameData.self, from: data)
-                    NotificationCenter.default.post(name: .didReceiveData, object: gameData)
+                    let sentData = try decoder.decode(GameData.self, from: data)
+                    NotificationCenter.default.post(name: .didReceiveData, object: sentData)
                 } catch {
-                    print(error.localizedDescription)
+//                    print(error.localizedDescription)
                 }
+            }
+            
+            do {
+                let sentData = try decoder.decode(dataType.self, from: data)
+                NotificationCenter.default.post(name: .didAnswer, object: sentData)
+            } catch {
+                
+            }
+            
+            do {
+                let sentData = try decoder.decode(UUID.self, from: data)
+                NotificationCenter.default.post(name: .didAnswer, object: sentData)
+            } catch{
+                
             }
         }
     }

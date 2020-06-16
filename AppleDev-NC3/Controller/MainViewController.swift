@@ -9,24 +9,51 @@
 import UIKit
 import MultipeerConnectivity
 import CoreData
+import AVFoundation
 
 var myName = ""
 var myChar = 0
+let myId = UUID()
 var gameData = GameData(rounds: 0)
 
-
 class MainViewController: UIViewController, MCBrowserViewControllerDelegate, UITextFieldDelegate {
+    
+    @IBOutlet weak var viewBackground2: UIView!
+    
+    @IBOutlet weak var buatButton: UIButton!
+    @IBOutlet weak var gabungButton: UIButton!
+    @IBOutlet weak var rankLabel: UILabel!
+    @IBOutlet weak var rankScore: UILabel!
+    @IBOutlet weak var pointBackground: UIView!
     
     @IBOutlet weak var charName: UITextField!
     @IBOutlet weak var charImage: UIImageView!
     @IBOutlet var charStepper: [UIButton]!
     var points = 0
+
+    var BGM = AVAudioPlayer()
     
     let mc = MCHandler.shared
     
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
+        
+        viewBackground2.layer.borderWidth = 3.0
+        viewBackground2.layer.borderColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
+        
+        pointBackground.layer.borderWidth = 3.0
+        pointBackground.layer.borderColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
+        
+        gabungButton.layer.borderWidth = 3.0
+        gabungButton.layer.borderColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
+        
+        buatButton.layer.borderWidth = 3.0
+        buatButton.layer.borderColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
+        
+        charImage.layer.borderWidth = 2.0
+        charImage.layer.borderColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
+        
         
         charName.delegate = self
         // Do any additional setup after loading the view.
@@ -43,6 +70,18 @@ class MainViewController: UIViewController, MCBrowserViewControllerDelegate, UIT
         charName.layer.borderColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1)
         charName.layer.borderWidth = 3.0
         charName.layer.cornerRadius = 5
+        
+        do{
+            let BGMPath = Bundle.main.path(forResource: "bgm1", ofType: "mp3")
+            try BGM = AVAudioPlayer(contentsOf: NSURL(fileURLWithPath: BGMPath!) as URL)
+        } catch {
+            // error
+        }
+        
+        BGM.numberOfLoops = -1
+        BGM.volume = 0.3
+        BGM.prepareToPlay()
+        BGM.play()
         
 //        set char
         charImage.image = chars[0]
@@ -87,6 +126,7 @@ class MainViewController: UIViewController, MCBrowserViewControllerDelegate, UIT
     }
     
     @IBAction func toRoom(_ sender: UIButton) {
+        BGM.stop()
         mc.playerData = Player(name: myName, char: myChar, points: 0)
         if sender.tag == 0 {
 

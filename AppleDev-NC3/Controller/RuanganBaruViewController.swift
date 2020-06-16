@@ -12,6 +12,10 @@ class RuanganBaruViewController: UIViewController {
     var rounds = 1
     @IBOutlet var stepper: [UIButton]!
     @IBOutlet weak var roundsLabel: UILabel!
+    
+    @IBOutlet weak var deskripsiKategori: UILabel!
+    @IBOutlet weak var gambarKategori: UIImageView!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
